@@ -43,7 +43,8 @@ export async function proxy(request: NextRequest) {
   const isProtectedPage =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/upload') ||
-    pathname.startsWith('/my-tickets');
+    pathname.startsWith('/my-tickets')||
+    pathname.startsWith('/admin');
 
   if (!user && isProtectedPage) {
     return NextResponse.redirect(new URL('/login', request.url));
@@ -63,5 +64,6 @@ export const config = {
     '/dashboard/:path*',
     '/upload/:path*',
     '/my-tickets/:path*',
+    '/admin/:path*',
   ],
 };

@@ -1,11 +1,37 @@
 'use client';
+
 import Link from 'next/link';
-import { LayoutDashboard, Upload, LogOut, FolderOpen } from 'lucide-react';
+import { LayoutDashboard, Upload, LogOut, FolderOpen, Shield } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function Navbar() {
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    async function checkAdmin() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+
+      const { data } = await supabase
+        .from('admins')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      setIsAdmin(!!data);
+    }
+
+    checkAdmin();
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -42,6 +68,16 @@ export default function Navbar() {
           <Upload size={20} />
           Νέο Δελτίο
         </Link>
+
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="flex items-center gap-3 p-3 hover:bg-slate-800 rounded-lg transition text-yellow-300"
+          >
+            <Shield size={20} />
+            Admin
+          </Link>
+        )}
       </div>
 
       <button
