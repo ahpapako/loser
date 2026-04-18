@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,12 +40,12 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
       <p className="mt-6 text-center text-sm text-slate-600">
         
-          <a href="/" className="text-blue-600 hover:underline font-medium">
+          <Link href="/" className="text-blue-600 hover:underline font-medium">
            Επιστροφή στην Αρχική
-          </a>
+          </Link>
         </p>
         <h2 className="text-2xl font-bold text-center text-slate-800 mb-8">
-          Ρεγεστερ στο OCR App
+          Εγγραφή στο OCR App
         </h2>
 
         {error && (
@@ -83,15 +84,15 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition duration-200 disabled:opacity-50"
           >
-            {loading ? 'Γίνεται σύνδεση...' : 'Είσοδος'}
+            {loading ? 'Γίνεται εγγραφή...' : 'Εγγραφή'}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-600">
          Έχετε ήδη λογαριασμό;{' '}
-          <a href="/login" className="text-blue-600 hover:underline font-medium">
+          <Link href="/login" className="text-blue-600 hover:underline font-medium">
             Σύνδεση
-          </a>
+          </Link>
         </p>
       </div>
     </div>

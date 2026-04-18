@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import Navbar from '@/components/Navbar';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'Προέκυψε άγνωστο σφάλμα';
 
 type Ticket = {
   id: string | number;
@@ -91,7 +95,7 @@ export default function AdminPage() {
     const index = publicUrl.indexOf(marker);
 
     if (index === -1) {
-      throw new Error('Δεν μπόρεσα να βρω το path της εικόνας από το public URL');
+      return null;
     }
 
     return publicUrl.substring(index + marker.length);
@@ -112,10 +116,15 @@ export default function AdminPage() {
 
       if (selectedFile) {
         const oldPath = extractStoragePathFromPublicUrl(ticket.image_url);
+        const imagePath =
+          oldPath ||
+          `${ticket.user_id}/${Date.now()}-${Math.random()
+            .toString(36)
+            .substring(7)}-${selectedFile.name}`;
 
         const { error: updateImageError } = await supabase.storage
           .from('tickets_images')
-          .update(oldPath, selectedFile, {
+          .upload(imagePath, selectedFile, {
             cacheControl: '3600',
             upsert: true,
           });
@@ -126,7 +135,7 @@ export default function AdminPage() {
 
         const {
           data: { publicUrl },
-        } = supabase.storage.from('tickets_images').getPublicUrl(oldPath);
+        } = supabase.storage.from('tickets_images').getPublicUrl(imagePath);
 
         ticket.image_url = publicUrl;
       }
@@ -151,8 +160,8 @@ export default function AdminPage() {
         ...prev,
         [String(ticket.id)]: null,
       }));
-    } catch (error: any) {
-      alert(`Σφάλμα αποθήκευσης: ${error.message}`);
+    } catch (error: unknown) {
+      alert(`Σφάλμα αποθήκευσης: ${getErrorMessage(error)}`);
     } finally {
       setSavingId(null);
     }
@@ -170,12 +179,14 @@ export default function AdminPage() {
 
       const imagePath = extractStoragePathFromPublicUrl(ticket.image_url);
 
-      const { error: storageDeleteError } = await supabase.storage
-        .from('tickets_images')
-        .remove([imagePath]);
+      if (imagePath) {
+        const { error: storageDeleteError } = await supabase.storage
+          .from('tickets_images')
+          .remove([imagePath]);
 
-      if (storageDeleteError) {
-        throw storageDeleteError;
+        if (storageDeleteError) {
+          throw storageDeleteError;
+        }
       }
 
       const { error: dbDeleteError } = await supabase
@@ -189,8 +200,8 @@ export default function AdminPage() {
 
       setTickets((prev) => prev.filter((t) => t.id !== ticket.id));
       alert('Το δελτίο διαγράφηκε.');
-    } catch (error: any) {
-      alert(`Σφάλμα διαγραφής: ${error.message}`);
+    } catch (error: unknown) {
+      alert(`Σφάλμα διαγραφής: ${getErrorMessage(error)}`);
     } finally {
       setDeletingId(null);
     }
@@ -229,9 +240,11 @@ export default function AdminPage() {
               <div key={ticket.id} className="bg-white rounded-xl shadow border p-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <img
+                    <Image
                       src={ticket.image_url}
                       alt="ticket"
+                      width={384}
+                      height={256}
                       className="w-full max-w-sm rounded-lg border object-cover"
                     />
                     <div className="mt-4">

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -36,9 +37,9 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
       <p className="mt-6 text-center text-sm text-slate-600">
         
-        <a href="/" className="text-blue-600 hover:underline font-medium">
+        <Link href="/" className="text-blue-600 hover:underline font-medium">
          Επιστροφή στην Αρχική
-        </a>
+        </Link>
       </p>
         <h2 className="text-2xl font-bold text-center text-slate-800 mb-8">
           Σύνδεση στο OCR App
@@ -86,9 +87,9 @@ export default function LoginPage() {
 
         <p className="mt-6 text-center text-sm text-slate-600">
           Δεν έχετε λογαριασμό;{' '}
-          <a href="/register" className="text-blue-600 hover:underline font-medium">
+          <Link href="/register" className="text-blue-600 hover:underline font-medium">
             Εγγραφή
-          </a>
+          </Link>
         </p>
       </div>
     </div>

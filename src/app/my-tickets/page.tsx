@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
+import Image from 'next/image';
 import { PlusCircle } from 'lucide-react';
 
 type Ticket = {
@@ -100,9 +101,11 @@ export default function MyTicketsPage() {
                       {new Date(ticket.created_at).toLocaleDateString('el-GR')}
                     </td>
                     <td className="p-4">
-                      <img
+                      <Image
                         src={ticket.image_url}
                         alt="ticket"
+                        width={48}
+                        height={48}
                         className="w-12 h-12 object-cover rounded shadow-sm border"
                       />
                     </td>

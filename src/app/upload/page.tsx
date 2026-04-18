@@ -6,6 +6,9 @@ import Navbar from '@/components/Navbar';
 import { UploadCloud, Loader2 } from 'lucide-react';
 import Tesseract from 'tesseract.js';
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'Προέκυψε άγνωστο σφάλμα';
+
 export default function UploadPage() {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
@@ -103,8 +106,8 @@ export default function UploadPage() {
       setMessage('Επιτυχία! Επιστροφή στο Dashboard...');
       setTimeout(() => router.push('/dashboard'), 1500);
 
-    } catch (error: any) {
-      setMessage(`Σφάλμα: ${error.message}`);
+    } catch (error: unknown) {
+      setMessage(`Σφάλμα: ${getErrorMessage(error)}`);
     } finally {
       setLoading(false);
     }
