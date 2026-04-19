@@ -4,7 +4,18 @@ import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { UploadCloud, Loader2 } from 'lucide-react';
-import Tesseract from 'tesseract.js';
+
+type OcrResponse = {
+  rawText: string;
+  confidence: number | null;
+  parsed: {
+    matchCount: number | null;
+    totalOdds: number | null;
+    stakeAmount: number | null;
+    potentialWinnings: number | null;
+  };
+  error?: string;
+};
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'Προέκυψε άγνωστο σφάλμα';
@@ -23,35 +34,36 @@ export default function UploadPage() {
 
   const performOCR = async (imageFile: File) => {
     setIsScanning(true);
-    setMessage('Γίνεται σάρωση του δελτίου (OCR)...');
+    setMessage('Γίνεται σάρωση του δελτίου με Google Vision OCR...');
     try {
-      const imageUrl = URL.createObjectURL(imageFile);
-      
-      // Φορτώνουμε Ελληνικά (ell) και Αγγλικά (eng)
-      const { data: { text } } = await Tesseract.recognize(imageUrl, 'ell+eng', {
-        logger: (m) => console.log(m) // Δείχνει την πρόοδο στο console (F12)
+      const formData = new FormData();
+      formData.append('image', imageFile);
+
+      const response = await fetch('/api/ocr/google', {
+        method: 'POST',
+        body: formData,
       });
-      
-      setRawText(text); // Το κρατάμε για να δεις τι ακριβώς διάβασε
 
-      // --- ΜΑΓΙΚΟ REGEX (Θα χρειαστεί προσαρμογή ανάλογα το πρακτορείο) ---
-      // Ψάχνει για "ΑΠΟΔΟΣΗ" ή "ΣΥΝ. ΑΠΟΔ" και παίρνει το νούμερο δίπλα
-      const oddsMatch = text.match(/(?:ΑΠΟΔΟΣΗ|ΑΠΟΔ\.|ODDS)[^\d]*(\d+[\.,]\d+)/i);
-      if (oddsMatch) {
-        // Μετατρέπουμε το κόμμα σε τελεία (π.χ. 12,50 -> 12.50)
-        setTotalOdds(Number(oddsMatch[1].replace(',', '.')));
+      const result = (await response.json()) as OcrResponse;
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Google Vision OCR failed');
       }
 
-      // Ψάχνει για "ΓΕΓΟΝΟΤΑ" ή "ΑΓΩΝΕΣ" (π.χ. ΓΕΓΟΝΟΤΑ: 5)
-      const matchesMatch = text.match(/(?:ΓΕΓΟΝΟΤΑ|ΑΓΩΝΕΣ|ΕΠΙΛΟΓΕΣ)[^\d]*(\d+)/i);
-      if (matchesMatch) {
-        setMatchCount(Number(matchesMatch[1]));
+      setRawText(result.rawText);
+
+      if (result.parsed.matchCount !== null) {
+        setMatchCount(result.parsed.matchCount);
       }
 
-      setMessage('Η σάρωση ολοκληρώθηκε! Ελέγξτε τα πεδία.');
+      if (result.parsed.totalOdds !== null) {
+        setTotalOdds(result.parsed.totalOdds);
+      }
+
+      setMessage('Η σάρωση ολοκληρώθηκε! Ελέγξτε τα πεδία πριν την αποθήκευση.');
     } catch (error) {
       console.error('Σφάλμα OCR:', error);
-      setMessage('Αποτυχία σάρωσης. Συμπληρώστε τα πεδία χειροκίνητα.');
+      setMessage(`Αποτυχία σάρωσης: ${getErrorMessage(error)}. Συμπληρώστε τα πεδία χειροκίνητα.`);
     } finally {
       setIsScanning(false);
     }
