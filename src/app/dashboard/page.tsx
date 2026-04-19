@@ -13,11 +13,14 @@ type Ticket = {
   image_url: string;
   match_count: number;
   total_odds: number | string;
+  bookmaker_stake_amount: number | string;
+  stake_amount: number | string;
   status: 'won' | 'lost' | 'pending' | string;
 };
 
 export default function Dashboard() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,6 +37,17 @@ export default function Dashboard() {
         setTickets([]);
       } else {
         setTickets(data || []);
+      }
+
+      const { data: balanceData, error: balanceError } = await supabase.rpc(
+        'get_my_wallet_balance'
+      );
+
+      if (balanceError) {
+        console.error('Σφάλμα φόρτωσης ταμείου:', balanceError.message);
+        setWalletBalance(null);
+      } else {
+        setWalletBalance(Number(balanceData));
       }
 
       setLoading(false);
@@ -53,13 +67,22 @@ export default function Dashboard() {
             <div className="text-sm text-slate-500 mt-1">Σύνολο: {tickets.length}</div>
           </div>
 
-          <Link
-            href="/upload"
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition shadow-sm"
-          >
-            <PlusCircle size={18} />
-            Νέο Δελτίο
-          </Link>
+          <div className="flex items-center gap-4">
+            <div className="bg-white border border-slate-200 rounded-lg px-5 py-3 shadow-sm">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Ταμείο</div>
+              <div className="text-2xl font-bold text-slate-800">
+                {walletBalance === null ? '...' : walletBalance.toFixed(2)} μονάδες
+              </div>
+            </div>
+
+            <Link
+              href="/upload"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition shadow-sm"
+            >
+              <PlusCircle size={18} />
+              Νέο Δελτίο
+            </Link>
+          </div>
         </header>
 
         <div className="bg-white shadow-md rounded-lg overflow-hidden">
@@ -77,6 +100,8 @@ export default function Dashboard() {
                   <th className="p-4 font-semibold text-slate-700">Φωτογραφία</th>
                   <th className="p-4 font-semibold text-slate-700">Αγώνες</th>
                   <th className="p-4 font-semibold text-slate-700">Απόδοση</th>
+                  <th className="p-4 font-semibold text-slate-700">Ποντάρισμα στοιχηματικής</th>
+                  <th className="p-4 font-semibold text-slate-700">Ποντάρισμα ταμείου</th>
                   <th className="p-4 font-semibold text-slate-700">Κατάσταση</th>
                 </tr>
               </thead>
@@ -97,6 +122,8 @@ export default function Dashboard() {
                     </td>
                     <td className="p-4">{ticket.match_count}</td>
                     <td className="p-4 font-mono">{ticket.total_odds}</td>
+                    <td className="p-4 font-mono">{ticket.bookmaker_stake_amount}</td>
+                    <td className="p-4 font-mono">{ticket.stake_amount}</td>
                     <td className="p-4">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-bold ${

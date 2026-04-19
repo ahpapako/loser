@@ -16,6 +16,8 @@ type Ticket = {
   image_url: string;
   match_count: number;
   total_odds: number;
+  bookmaker_stake_amount: number | string;
+  stake_amount: number | string;
   status: 'won' | 'lost' | 'pending' | string;
 };
 
@@ -145,6 +147,7 @@ export default function AdminPage() {
         .update({
           match_count: Number(ticket.match_count),
           total_odds: Number(ticket.total_odds),
+          bookmaker_stake_amount: Number(ticket.bookmaker_stake_amount) || 0,
           status: ticket.status,
           image_url: ticket.image_url,
         })
@@ -303,6 +306,24 @@ export default function AdminPage() {
                         }
                         className="w-full px-3 py-2 border rounded-lg"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Ποντάρισμα στοιχηματικής</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={ticket.bookmaker_stake_amount}
+                        onChange={(e) =>
+                          handleFieldChange(ticket.id, 'bookmaker_stake_amount', Number(e.target.value))
+                        }
+                        className="w-full px-3 py-2 border rounded-lg"
+                      />
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-slate-500">Ποντάρισμα ταμείου site</p>
+                      <p className="font-mono font-medium">{ticket.stake_amount}</p>
                     </div>
 
                     <div>

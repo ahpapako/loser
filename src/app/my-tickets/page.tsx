@@ -14,6 +14,8 @@ type Ticket = {
   image_url: string;
   match_count: number;
   total_odds: number | string;
+  bookmaker_stake_amount: number | string;
+  stake_amount: number | string;
   status: 'won' | 'lost' | 'pending' | string;
 };
 
@@ -91,6 +93,8 @@ export default function MyTicketsPage() {
                   <th className="p-4 font-semibold text-slate-700">Φωτογραφία</th>
                   <th className="p-4 font-semibold text-slate-700">Αγώνες</th>
                   <th className="p-4 font-semibold text-slate-700">Απόδοση</th>
+                  <th className="p-4 font-semibold text-slate-700">Ποντάρισμα στοιχηματικής</th>
+                  <th className="p-4 font-semibold text-slate-700">Ποντάρισμα ταμείου</th>
                   <th className="p-4 font-semibold text-slate-700">Κατάσταση</th>
                 </tr>
               </thead>
@@ -111,6 +115,8 @@ export default function MyTicketsPage() {
                     </td>
                     <td className="p-4">{ticket.match_count}</td>
                     <td className="p-4 font-mono">{ticket.total_odds}</td>
+                    <td className="p-4 font-mono">{ticket.bookmaker_stake_amount}</td>
+                    <td className="p-4 font-mono">{ticket.stake_amount}</td>
                     <td className="p-4">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-bold ${

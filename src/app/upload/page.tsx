@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
@@ -17,6 +17,11 @@ type OcrResponse = {
   error?: string;
 };
 
+type PlaceTicketResult = {
+  ticket_id: string;
+  balance: number | string;
+};
+
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'Προέκυψε άγνωστο σφάλμα';
 
@@ -29,8 +34,27 @@ export default function UploadPage() {
 
   const [matchCount, setMatchCount] = useState<number | ''>('');
   const [totalOdds, setTotalOdds] = useState<number | ''>('');
+  const [bookmakerStakeAmount, setBookmakerStakeAmount] = useState<number | ''>('');
+  const [stakeAmount, setStakeAmount] = useState<number | ''>('');
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   // Κρατάμε και το αρχικό κείμενο για δικό σου debugging
   const [rawText, setRawText] = useState(''); 
+
+  useEffect(() => {
+    async function fetchWalletBalance() {
+      const { data, error } = await supabase.rpc('get_my_wallet_balance');
+
+      if (error) {
+        console.error('Σφάλμα φόρτωσης ταμείου:', error.message);
+        setWalletBalance(null);
+        return;
+      }
+
+      setWalletBalance(Number(data));
+    }
+
+    fetchWalletBalance();
+  }, []);
 
   const performOCR = async (imageFile: File) => {
     setIsScanning(true);
@@ -60,6 +84,10 @@ export default function UploadPage() {
         setTotalOdds(result.parsed.totalOdds);
       }
 
+      if (result.parsed.stakeAmount !== null) {
+        setBookmakerStakeAmount(result.parsed.stakeAmount);
+      }
+
       setMessage('Η σάρωση ολοκληρώθηκε! Ελέγξτε τα πεδία πριν την αποθήκευση.');
     } catch (error) {
       console.error('Σφάλμα OCR:', error);
@@ -86,6 +114,16 @@ export default function UploadPage() {
       setLoading(true);
       setMessage('Ανέβασμα εικόνας...');
 
+      const stake = Number(stakeAmount);
+
+      if (!Number.isFinite(stake) || stake <= 0) {
+        throw new Error('Βάλε πόσες μονάδες θέλεις να ποντάρεις.');
+      }
+
+      if (walletBalance !== null && stake > walletBalance) {
+        throw new Error('Δεν μπορείς να ποντάρεις περισσότερες μονάδες από το ταμείο σου.');
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Δεν βρέθηκε συνδεδεμένος χρήστης');
 
@@ -105,21 +143,35 @@ export default function UploadPage() {
 
       setMessage('Αποθήκευση στη βάση δεδομένων...');
 
-      const { error: dbError } = await supabase.from('tickets').insert({
-        user_id: user.id,
-        image_url: publicUrl,
-        match_count: Number(matchCount) || 0,
-        total_odds: Number(totalOdds) || 0.0,
-        status: 'pending'
+      const { data: ticketResult, error: dbError } = await supabase.rpc('place_ticket', {
+        p_image_url: publicUrl,
+        p_match_count: Number(matchCount) || 0,
+        p_total_odds: Number(totalOdds) || 0,
+        p_bookmaker_stake_amount: Number(bookmakerStakeAmount) || 0,
+        p_stake_amount: stake,
       });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        await supabase.storage.from('tickets_images').remove([filePath]);
+        throw dbError;
+      }
+
+      const placedTicket = (ticketResult as PlaceTicketResult[] | null)?.[0];
+
+      if (placedTicket) {
+        setWalletBalance(Number(placedTicket.balance));
+      }
 
       setMessage('Επιτυχία! Επιστροφή στο Dashboard...');
       setTimeout(() => router.push('/dashboard'), 1500);
 
     } catch (error: unknown) {
-      setMessage(`Σφάλμα: ${getErrorMessage(error)}`);
+      const errorMessage = getErrorMessage(error);
+      const friendlyMessage = errorMessage.includes('Insufficient wallet balance')
+        ? 'Δεν μπορείς να ποντάρεις περισσότερες μονάδες από το ταμείο σου.'
+        : errorMessage;
+
+      setMessage(`Σφάλμα: ${friendlyMessage}`);
     } finally {
       setLoading(false);
     }
@@ -154,7 +206,7 @@ export default function UploadPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Αγώνες</label>
                 <input 
@@ -175,6 +227,33 @@ export default function UploadPage() {
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   disabled={isScanning}
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Ποντάρισμα στη στοιχηματική</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={bookmakerStakeAmount}
+                  onChange={(e) => setBookmakerStakeAmount(e.target.value ? Number(e.target.value) : '')}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  disabled={isScanning}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Ποντάρισμα ταμείου site</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={stakeAmount}
+                  onChange={(e) => setStakeAmount(e.target.value ? Number(e.target.value) : '')}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  disabled={isScanning}
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Ταμείο: {walletBalance === null ? '...' : walletBalance.toFixed(2)}
+                </p>
               </div>
             </div>
 
